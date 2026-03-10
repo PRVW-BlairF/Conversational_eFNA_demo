@@ -1,62 +1,32 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { getState, runGuidedDemo, startSession } from '@/lib/api';
 import { SessionState } from '@/types/session';
-import { buildDemoState, seedLength } from '@/lib/demoSession';
-
-const API = process.env.NEXT_PUBLIC_API_URL;
-const STORAGE_KEY = 'ai-fact-find-copilot-state';
 
 export function useSession() {
   const [session, setSession] = useState<SessionState | null>(null);
   const [loading, setLoading] = useState(false);
-  const [step, setStep] = useState(0);
 
-  async function init() {
+  async function init(mode: 'demo' | 'live' = 'demo') {
     setLoading(true);
-    if (!API) {
-      const fromStorage = typeof window !== 'undefined' ? localStorage.getItem(STORAGE_KEY) : null;
-      const restored = fromStorage ? (JSON.parse(fromStorage) as SessionState) : buildDemoState(0);
-      setSession(restored);
-      setStep(restored.transcript.length);
-      setLoading(false);
-      return restored.id;
-    }
-
-    const res = await fetch(`${API}/session/start`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mode: 'demo' }) });
-    const created = await res.json();
-    const stateRes = await fetch(`${API}/session/${created.session_id}/state`, { cache: 'no-store' });
-    const state = (await stateRes.json()) as SessionState;
-    setSession(state);
+    const created = await startSession(mode);
+    const sessionId = created.session_id;
+    const ws = new WebSocket(`${(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000').replace('http', 'ws')}/api/session/${sessionId}/stream`);
+    ws.onmessage = async () => setSession(await getState(sessionId));
+    setSession(await getState(sessionId));
     setLoading(false);
-    return created.session_id;
+    return sessionId;
   }
 
-  async function guided() {
-    if (!session) return;
-    if (!API) {
-      const next = buildDemoState(Math.min(step + 1, seedLength));
-      setStep(Math.min(step + 1, seedLength));
-      setSession(next);
-      if (typeof window !== 'undefined') localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-      return;
-    }
-
-    await fetch(`${API}/session/${session.id}/guided-demo`, { method: 'POST' });
-    const stateRes = await fetch(`${API}/session/${session.id}/state`, { cache: 'no-store' });
-    setSession((await stateRes.json()) as SessionState);
-  }
-
-  async function resetDemo() {
-    const next = buildDemoState(0);
-    setStep(0);
-    setSession(next);
-    if (typeof window !== 'undefined') localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+  async function guided(sessionId: string) {
+    await runGuidedDemo(sessionId);
+    setSession(await getState(sessionId));
   }
 
   useEffect(() => {
     void init();
   }, []);
 
-  return { session, loading, guided, resetDemo };
+  return { session, loading, init, guided, refresh: async () => session && setSession(await getState(session.id)) };
 }
