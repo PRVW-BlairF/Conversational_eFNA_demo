@@ -10,7 +10,7 @@ import { CopilotPanel } from '@/components/CopilotPanel';
 import { InsightStrip } from '@/components/InsightStrip';
 
 export default function Page() {
-  const { session, guided, resetDemo } = useSession();
+  const { session, guided } = useSession();
   const coverage = useMemo(() => {
     if (!session) return {};
     const result: Record<string, number> = {};
@@ -24,10 +24,10 @@ export default function Page() {
 
   return (
     <div className="space-y-4">
-      <HeroHeader completion={session?.fna.completion_score ?? 0} onGuidedDemo={guided} onReset={resetDemo} />
-      <JourneyStrip progress={(session?.fna.completion_score ?? 0) > 85 ? 4 : (session?.fna.completion_score ?? 0) > 50 ? 3 : 2} />
+      <HeroHeader completion={session?.fna.completion_score ?? 0} onGuidedDemo={() => session && guided(session.id)} />
+      <JourneyStrip progress={(session?.fna.completion_score ?? 0) > 70 ? 4 : 2} />
       {session?.warnings?.length ? <div className="p-3 rounded-2xl bg-amber-50 border border-amber-200 text-sm">Setup warning: {session.warnings.join(' | ')}</div> : null}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+      <div className="grid grid-cols-3 gap-4">
         <ConversationPanel segments={session?.transcript ?? []} />
         <FnaPanel sections={session?.fna.sections ?? {}} />
         <CopilotPanel missing={session?.missing_fields ?? []} questions={session?.next_questions ?? []} contradictions={session?.fna.contradictions ?? []} />

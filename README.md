@@ -1,28 +1,48 @@
 # AI Fact Find Copilot (Demo)
 
-A polished, local-first demo for financial advisers that maps conversations into a structured, auditable Financial Needs Analysis (FNA) draft.
-
-## What changed for deployment
-This repo is now structured so **GitHub Pages can run the demo UI without a backend**:
-- Next.js is configured for static export (`output: export`).
-- The frontend includes a full guided-demo simulator with seeded transcript + live FNA updates.
-- If `NEXT_PUBLIC_API_URL` is not set, the app runs in static local demo mode automatically.
+A local-first demo web application for financial advisers that turns conversation transcripts into a structured, auditable Financial Needs Analysis (FNA) draft.
 
 ## Stack
 - **Frontend**: Next.js 14 (App Router), TypeScript, Tailwind CSS, Framer Motion, Recharts, lucide-react
-- **Backend (optional for local full stack)**: FastAPI, WebSocket streaming, Pydantic models
-- **AI Local integrations (optional)**: faster-whisper, pyannote, Ollama (`qwen2.5:7b-instruct`)
+- **Backend**: FastAPI, WebSocket streaming, Pydantic models, local storage + in-memory repository (SQLite-ready structure)
+- **AI Local**:
+  - `faster-whisper` for STT (fallback-safe)
+  - `pyannote` for diarisation (optional; fallback to heuristic labels)
+  - `ollama` for extraction/question generation model (`qwen2.5:7b-instruct` recommended)
 
-## Run as static demo (recommended for GitHub Pages parity)
-```bash
-cd frontend
-npm install
-npm run build
-npm run start
+## Features
+- Live/demo session creation
+- Audio upload endpoint
+- Transcript segment processing with extraction + merge logic
+- Deterministic rules engine for mandatory fields and follow-up gaps
+- Field statuses: `confirmed`, `inferred`, `missing`, `conflicting`
+- Evidence metadata per extracted field
+- Guided demo mode with seeded realistic conversation
+- Session review page with unresolved items, audit trail, and export payload
+- Graceful fallback warnings when local model dependencies are missing
+
+## Project Structure
+
+```
+frontend/
+  app/
+  components/
+  hooks/
+  lib/
+  types/
+backend/
+  app/
+    api/
+    services/
+    schemas/
+    rules/
+    storage/
+    utils/
 ```
 
-## Run full stack locally
-### Backend
+## Setup
+
+### 1) Backend
 ```bash
 cd backend
 python -m venv .venv
@@ -31,34 +51,44 @@ pip install -r requirements.txt
 uvicorn app.main:app --reload --port 8000
 ```
 
-### Frontend (with backend)
+### 2) Frontend
 ```bash
 cd frontend
 npm install
-NEXT_PUBLIC_API_URL=http://localhost:8000/api npm run dev
+npm run dev
 ```
 
+Frontend runs on `http://localhost:3000` and expects API at `http://localhost:8000`.
+Set `NEXT_PUBLIC_API_URL` if needed.
 
-## GitHub Pages quick fix (README issue)
-If your Pages site was showing the repository README, this repo now includes:
-- `index.html` at repo root (entrypoint)
-- `docs/index.html` static demo app
-- `.nojekyll` to ensure static assets are served directly
+## Local model setup
 
-So Pages source can be set to **Deploy from branch** (`main` / `/root`) and it will load the demo immediately.
+### faster-whisper
+```bash
+pip install faster-whisper
+```
 
-## GitHub Pages deployment
-Use GitHub Actions to build and publish `frontend/out`.
-`frontend/next.config.mjs` auto-detects repository base path in Actions:
-- `basePath` and `assetPrefix` are set from `GITHUB_REPOSITORY`.
-- output is static and route-safe with trailing slashes.
+### pyannote (optional)
+```bash
+pip install pyannote.audio
+```
 
-## Guided demo behaviour
-- Click **Advance guided demo** repeatedly to simulate a meeting progression.
-- Transcript, extracted FNA fields, completion score, missing fields, and next questions update as the session progresses.
-- Click **Reset** to restart.
+If unavailable, the app still runs and uses fallback speaker assignment.
 
-## API Endpoints (for full-stack mode)
+### Ollama
+Install Ollama from https://ollama.com and pull a model:
+```bash
+ollama pull qwen2.5:7b-instruct
+```
+
+If Ollama is unavailable, the app uses heuristic extraction and deterministic question generation.
+
+## Guided demo mode
+1. Start a demo session.
+2. Click **Run guided demo** in the header.
+3. The seeded transcript simulates adviser-client dialogue and updates transcript/FNA/gaps.
+
+## API Endpoints
 - `POST /api/session/start`
 - `POST /api/session/upload-audio`
 - `WS /api/session/{id}/stream`
@@ -71,6 +101,7 @@ Use GitHub Actions to build and publish `frontend/out`.
 - `GET /api/session/{id}/export`
 
 ## Known limitations
-- Static mode is a deterministic simulator (no live microphone capture in Pages).
-- Backend persistence is currently in-memory.
-- Optional model integrations gracefully fall back when unavailable.
+- Demo persistence is in-memory (repository pattern prepared for SQLite/Postgres upgrade).
+- Diarisation integration is stubbed unless a full pyannote pipeline/token setup is provided.
+- Extraction prompt is lightweight for demo speed and local reliability.
+- Audio upload storage is local and non-production hardened.
