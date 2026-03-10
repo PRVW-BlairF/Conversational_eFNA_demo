@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Fact Find Copilot</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div class="wrap">
+    <header class="hero">
+      <div>
+        <h1>AI Fact Find Copilot</h1>
+        <p>Live conversation mapping into a structured financial fact find</p>
+        <div class="chips">
+          <span class="chip live" id="sessionState">Ready</span>
+          <span class="chip">Adviser controlled</span>
+        </div>
+      </div>
+      <div class="score">
+        <small>Completion</small>
+        <div id="completion">0%</div>
+      </div>
+    </header>
+
+    <div class="actions">
+      <button id="startListening">Start listening</button>
+      <button id="stopListening">Stop listening</button>
+      <button id="advance">Advance guided demo</button>
+      <button id="reset" class="ghost">Reset</button>
+    </div>
+
+    <div class="rail"><div id="railFill"></div></div>
+    <div id="micStatus" class="notice">Microphone mode available in supported browsers (Chrome/Edge). Guided demo always works.</div>
+
+    <main class="grid">
+      <section class="card">
+        <h3>Conversation stream</h3>
+        <div id="transcript"></div>
+      </section>
+
+      <section class="card">
+        <h3>Fact find snapshot</h3>
+        <div id="fna"></div>
+      </section>
+
+      <section class="card">
+        <h3>Copilot gaps</h3>
+        <div class="best">
+          <small>Best next question</small>
+          <p id="bestQuestion">Run guided demo or start listening to generate suggestions.</p>
+        </div>
+        <h4>Missing required fields</h4>
+        <ul id="missing"></ul>
+      </section>
+    </main>
+  </div>
+  <script src="./app.js"></script>
+</body>
+</html>
